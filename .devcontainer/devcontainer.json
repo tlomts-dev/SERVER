@@ -1,0 +1,3 @@
+{
+  "postStartCommand": "bash /workspaces/SERVER/start.sh"
+}
