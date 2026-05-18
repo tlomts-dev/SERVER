@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مُشغّل السيرفر</title>
+    <style>
+        body { background: #0f172a; color: #f8fafc; font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #1e293b; padding: 30px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); width: 100%; max-width: 400px; text-align: center; border: 1px solid #334155; }
+        h2 { color: #10b981; margin-bottom: 20px; font-weight: 900; }
+        input { width: 90%; padding: 12px; margin: 10px 0; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white; outline: none; }
+        input:focus { border-color: #10b981; }
+        button { background: #10b981; color: #000; border: none; padding: 14px 20px; width: 100%; border-radius: 6px; font-size: 16px; cursor: pointer; margin-top: 15px; font-weight: bold; transition: 0.3s; }
+        button:hover { opacity: 0.8; transform: scale(0.98); }
+        .btn-blue { background: #3b82f6; color: white; }
+        .hidden { display: none; }
+        #status { margin-top: 20px; font-size: 14px; color: #94a3b8; line-height: 1.6; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>🚀 مُشغّل السيرفر الذكي</h2>
+        
+        <div id="setup">
+            <p style="font-size: 13px; color: #94a3b8; margin-bottom: 15px;">أدخل بياناتك لمرة واحدة فقط (ستُحفظ في جهازك سرياً)</p>
+            <input type="password" id="pat" placeholder="GitHub Token (ghp_...)">
+            <input type="text" id="csName" placeholder="اسم الـ Codespace (ideal-...)">
+            <input type="text" id="ngrok" placeholder="رابط Ngrok (xyz.ngrok-free.app)">
+            <button onclick="saveAndStart()">حفظ الإعدادات</button>
+        </div>
+
+        <div id="action" class="hidden">
+            <button id="wakeBtn" onclick="wakeUp()">⚡ إيقاظ السيرفر (Codespaces)</button>
+            <p id="status">السيرفر نائم حالياً. اضغط على الزر لإيقاظه.</p>
+            <button id="panelBtn" class="hidden btn-blue" onclick="goToPanel()">🎮 الدخول للوحة التحكم</button>
+            <button onclick="resetData()" style="background: transparent; border: 1px solid #ef4444; color: #ef4444; margin-top: 20px; padding: 8px; font-size: 12px;">إعادة ضبط البيانات</button>
+        </div>
+    </div>
+
+    <script>
+        const pat = localStorage.getItem('pat');
+        const csName = localStorage.getItem('csName');
+        const ngrok = localStorage.getItem('ngrok');
+
+        if(pat && csName && ngrok) {
+            document.getElementById('setup').classList.add('hidden');
+            document.getElementById('action').classList.remove('hidden');
+        }
+
+        function saveAndStart() {
+            localStorage.setItem('pat', document.getElementById('pat').value.trim());
+            localStorage.setItem('csName', document.getElementById('csName').value.trim());
+            localStorage.setItem('ngrok', document.getElementById('ngrok').value.trim());
+            location.reload();
+        }
+
+        function resetData() {
+            localStorage.clear();
+            location.reload();
+        }
+
+        async function wakeUp() {
+            document.getElementById('status').innerText = '⏳ جاري إرسال إشارة الإيقاظ لجيتهاب...';
+            document.getElementById('wakeBtn').classList.add('hidden');
+
+            try {
+                const res = await fetch(`https://api.github.com/user/codespaces/${localStorage.getItem('csName')}/start`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('pat')}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+
+                if(res.ok || res.status === 304 || res.status === 409) {
+                    document.getElementById('status').innerText = '✅ تم الإيقاظ بنجاح! \n السيرفر يشتغل الآن في الخلفية... \n يرجى الانتظار (45 ثانية) حتى تعمل كل الأنظمة.';
+                    
+                    setTimeout(() => {
+                        document.getElementById('status').innerText = '🎉 الأنظمة جاهزة! يمكنك الدخول للوحة الآن.';
+                        document.getElementById('panelBtn').classList.remove('hidden');
+                    }, 45000);
+                } else {
+                    const err = await res.json();
+                    document.getElementById('status').innerText = '❌ خطأ: ' + err.message;
+                    document.getElementById('wakeBtn').classList.remove('hidden');
+                }
+            } catch(e) {
+                document.getElementById('status').innerText = '❌ فشل الاتصال! تأكد من الإنترنت.';
+                document.getElementById('wakeBtn').classList.remove('hidden');
+            }
+        }
+
+        function goToPanel() {
+            let domain = localStorage.getItem('ngrok').replace('https://', '').replace('http://', '').replace(/\/$/, "");
+            window.location.href = 'https://' + domain;
+        }
+    </script>
+</body>
+</html>
